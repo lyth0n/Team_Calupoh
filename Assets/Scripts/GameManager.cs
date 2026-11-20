@@ -1,20 +1,23 @@
-using UnityEngine;
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 using UnityEngine.SceneManagement;
 
 public class GameManager : MonoBehaviour
 {
     public static GameManager Instance { get; private set; }
 
+    public bool IsGamePaused { get; private set; }
+    public bool IsLoadingScene { get; private set; }
+
     [Header("Configuración de Estado")]
     [SerializeField] private string currentSceneName;
 
-    // Diccionario para almacenar variables arbitrarias entre escenas y scripts (ej: Llaves, Puntos, Banderas)
-    private Dictionary<string, object> gameVariables = new Dictionary<string, object>();
+    // Diccionario para almacenar variables persistentes entre escenas
+    private readonly Dictionary<string, object> gameVariables = new Dictionary<string, object>();
 
-    // Estructura para guardar el progreso del árbol de diálogo (ID del diálogo -> ID del nodo actual / completado)
-    private Dictionary<string, DialogueProgress> dialogueProgressData = new Dictionary<string, DialogueProgress>();
+    // Progreso persistente de árboles de diálogo (dialogueId -> DialogueProgress)
+    private readonly Dictionary<string, DialogueProgress> dialogueProgressData = new Dictionary<string, DialogueProgress>();
 
     [Serializable]
     public class DialogueProgress
@@ -22,11 +25,20 @@ public class GameManager : MonoBehaviour
         public string currentNodeId;
         public List<string> visitedNodeIds = new List<string>();
         public bool isDialogueCompleted;
+
+        public DialogueProgress Clone()
+        {
+            return new DialogueProgress
+            {
+                currentNodeId = currentNodeId,
+                visitedNodeIds = visitedNodeIds != null ? new List<string>(visitedNodeIds) : new List<string>(),
+                isDialogueCompleted = isDialogueCompleted
+            };
+        }
     }
 
     private void Awake()
     {
-        // Implementación del Patrón Singleton persistente
         if (Instance != null && Instance != this)
         {
             Destroy(gameObject);
@@ -35,32 +47,99 @@ public class GameManager : MonoBehaviour
 
         Instance = this;
         DontDestroyOnLoad(gameObject);
-    }
 
-    private void OnEnable()
-    {
+        currentSceneName = SceneManager.GetActiveScene().name;
         SceneManager.sceneLoaded += OnSceneLoaded;
     }
 
-    private void OnDisable()
+    private void OnDestroy()
     {
-        SceneManager.sceneLoaded -= OnSceneLoaded;
+        if (Instance == this)
+        {
+            SceneManager.sceneLoaded -= OnSceneLoaded;
+            Instance = null;
+        }
+    }
+
+    public void SetPausedState(bool paused)
+    {
+        IsGamePaused = paused;
+        Time.timeScale = paused ? 0f : 1f;
+        // Silenciar/atenuar SFX de gameplay, desactivar Input Map, etc.
+    }
+
+    public void ReturnToMainMenu(string mainMenuSceneName, bool resetRunData = false)
+    {
+        IsGamePaused = false;
+        Time.timeScale = 1f;
+
+        if (resetRunData)
+        {
+            ResetRunState();
+        }
+
+        LoadScene(mainMenuSceneName);
+    }
+
+    /// <summary>
+    /// Limpia solo datos de partida/run si se solicita explícitamente, preservando datos globales si no se indica.
+    /// </summary>
+    public void ResetRunState(IEnumerable<string> keysToClear = null, bool clearDialogueProgress = false)
+    {
+        if (keysToClear == null)
+        {
+            gameVariables.Clear();
+        }
+        else
+        {
+            foreach (var key in keysToClear)
+            {
+                if (!string.IsNullOrEmpty(key))
+                {
+                    gameVariables.Remove(key);
+                }
+            }
+        }
+
+        if (clearDialogueProgress)
+        {
+            dialogueProgressData.Clear();
+        }
     }
 
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
         currentSceneName = scene.name;
-        Debug.Log($"[GameManager] Escena cargada: {currentSceneName}");
+        IsLoadingScene = false;
+
+        // Evita que una escena cargada quede congelada si se cargó estando en pausa
+        if (!IsGamePaused && Math.Abs(Time.timeScale) < 0.0001f)
+        {
+            Time.timeScale = 1f;
+        }
+
+        Debug.Log($"[GameManager] Escena cargada: {currentSceneName} (Modo: {mode})");
     }
 
     #region 1. Scene Select Function
-    /// <summary>
-    /// Carga una escena por su nombre de forma segura.
-    /// </summary>
+
     public void LoadScene(string sceneName)
     {
+        if (string.IsNullOrWhiteSpace(sceneName))
+        {
+            Debug.LogWarning("[GameManager] El nombre de la escena está vacío.");
+            return;
+        }
+
+        if (IsLoadingScene)
+        {
+            Debug.LogWarning($"[GameManager] Ya hay una carga de escena en curso. Se ignoró '{sceneName}'.");
+            return;
+        }
+
         if (Application.CanStreamedLevelBeLoaded(sceneName))
         {
+            IsLoadingScene = true;
             SceneManager.LoadScene(sceneName);
         }
         else
@@ -69,61 +148,111 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Carga una escena por su índice en las Build Settings.
-    /// </summary>
     public void LoadScene(int sceneIndex)
     {
-        SceneManager.LoadScene(sceneIndex);
-    }
-    #endregion
-
-    #region 2. Variable Persistence System
-    /// <summary>
-    /// Establece o actualiza una variable global compartida entre scripts y escenas.
-    /// </summary>
-    public void SetVariable(string key, object value)
-    {
-        if (gameVariables.ContainsKey(key))
+        if (IsLoadingScene)
         {
-            gameVariables[key] = value;
+            Debug.LogWarning($"[GameManager] Ya hay una carga de escena en curso. Se ignoró el índice {sceneIndex}.");
+            return;
+        }
+
+        if (sceneIndex >= 0 && sceneIndex < SceneManager.sceneCountInBuildSettings)
+        {
+            IsLoadingScene = true;
+            SceneManager.LoadScene(sceneIndex);
         }
         else
         {
-            gameVariables.Add(key, value);
+            Debug.LogError($"[GameManager] El índice de escena '{sceneIndex}' está fuera de rango en Build Settings.");
         }
     }
 
-    /// <summary>
-    /// Obtiene una variable global casteada al tipo de dato esperado.
-    /// </summary>
+    #endregion
+
+    #region 2. Variable Persistence System
+
+    public void SetVariable(string key, object value)
+    {
+        if (string.IsNullOrEmpty(key))
+        {
+            Debug.LogWarning("[GameManager] No se puede guardar una variable con clave vacía.");
+            return;
+        }
+
+        gameVariables[key] = value;
+    }
+
     public T GetVariable<T>(string key, T defaultValue = default)
     {
-        if (gameVariables.ContainsKey(key) && gameVariables[key] is T val)
+        if (string.IsNullOrEmpty(key) || !gameVariables.TryGetValue(key, out object rawValue))
         {
-            return val;
+            return defaultValue;
         }
-        return defaultValue;
+
+        if (rawValue is T typedValue)
+        {
+            return typedValue;
+        }
+
+        if (rawValue == null)
+        {
+            return defaultValue;
+        }
+
+        // Intento de conversión segura para tipos numéricos/primitivos (ej. int -> float)
+        try
+        {
+            if (typeof(T) == typeof(bool) && rawValue is string sBool && bool.TryParse(sBool, out bool parsedBool))
+            {
+                return (T)(object)parsedBool;
+            }
+
+            return (T)Convert.ChangeType(rawValue, typeof(T));
+        }
+        catch
+        {
+            Debug.LogWarning($"[GameManager] No se pudo convertir '{key}' ({rawValue.GetType().Name}) a {typeof(T).Name}. Se devuelve el valor por defecto.");
+            return defaultValue;
+        }
     }
+
+    public bool HasVariable(string key)
+    {
+        return !string.IsNullOrEmpty(key) && gameVariables.ContainsKey(key);
+    }
+
+    public void RemoveVariable(string key)
+    {
+        if (!string.IsNullOrEmpty(key))
+        {
+            gameVariables.Remove(key);
+        }
+    }
+
     #endregion
 
     #region 3. Dialogue Tree Progress System
-    /// <summary>
-    /// Guarda o actualiza el progreso actual de un árbol de diálogo específico.
-    /// </summary>
+
     public void SaveDialogueProgress(string dialogueId, string currentNodeId, string visitedNodeId = null, bool completed = false)
     {
-        if (!dialogueProgressData.ContainsKey(dialogueId))
+        if (string.IsNullOrEmpty(dialogueId))
         {
-            dialogueProgressData[dialogueId] = new DialogueProgress
-            {
-                currentNodeId = currentNodeId,
-                isDialogueCompleted = completed
-            };
+            Debug.LogWarning("[GameManager] dialogueId no puede estar vacío al guardar progreso de diálogo.");
+            return;
         }
 
-        var progress = dialogueProgressData[dialogueId];
-        progress.currentNodeId = currentNodeId;
+        if (!dialogueProgressData.TryGetValue(dialogueId, out DialogueProgress progress))
+        {
+            progress = new DialogueProgress();
+            dialogueProgressData[dialogueId] = progress;
+        }
+
+        if (!string.IsNullOrEmpty(currentNodeId))
+        {
+            progress.currentNodeId = currentNodeId;
+        }
+
+        // Mantiene true si ya estaba completado, salvo que se pase explícitamente false en un reinicio
         progress.isDialogueCompleted = completed;
 
         if (!string.IsNullOrEmpty(visitedNodeId) && !progress.visitedNodeIds.Contains(visitedNodeId))
@@ -132,16 +261,20 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Obtiene el progreso guardado de un árbol de diálogo.
-    /// </summary>
-    public DialogueProgress GetDialogueProgress(string dialogueId)
+    public DialogueProgress GetDialogueProgress(string dialogueId, bool returnClone = true)
     {
-        if (dialogueProgressData.TryGetValue(dialogueId, out var progress))
+        if (string.IsNullOrEmpty(dialogueId))
         {
-            return progress;
+            return null;
         }
+
+        if (dialogueProgressData.TryGetValue(dialogueId, out DialogueProgress progress))
+        {
+            return returnClone ? progress.Clone() : progress;
+        }
+
         return null;
     }
+
     #endregion
 }
