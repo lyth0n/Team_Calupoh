@@ -1,5 +1,7 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
+[RequireComponent(typeof(Rigidbody2D))]
 public class PlayerController2D : MonoBehaviour
 {
     [Header("Movimiento")]
@@ -13,44 +15,63 @@ public class PlayerController2D : MonoBehaviour
     private bool isGrounded;
 
     [Header("Interacción")]
-    public KeyCode interactKey = KeyCode.E;
     private GameObject currentInteractable;
 
     private Rigidbody2D rb;
 
-    void Start()
+    void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
-        // Asegúrate de congelar la rotación en Z para que el personaje no ruede
+        // Congela la rotación en Z para que el personaje no ruede
         rb.freezeRotation = true;
     }
 
     void Update()
     {
-        // Movimiento horizontal con A (izquierda) y D (derecha)
-        horizontalInput = 0f;
-        if (Input.GetKey(KeyCode.A)) horizontalInput = -1f;
-        if (Input.GetKey(KeyCode.D)) horizontalInput = 1f;
-
-        // Salto con W (comprueba si está tocando el suelo)
-        isGrounded = Physics2D.OverlapCircle(groundCheck.position, 0.2f, groundLayer);
-        if (Input.GetKeyDown(KeyCode.W) && isGrounded)
+        if (groundCheck != null)
         {
-            rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce);
-        }
-
-        // Interacción con objeto cercano usando la tecla E
-        if (Input.GetKeyDown(interactKey) && currentInteractable != null)
-        {
-            Interact();
+            isGrounded = Physics2D.OverlapCircle(groundCheck.position, 0.2f, groundLayer);
         }
     }
 
     void FixedUpdate()
     {
-        // Aplicar velocidad horizontal manteniendo la vertical actual
+        // En Unity 6 se usa linearVelocity en lugar de velocity
         rb.linearVelocity = new Vector2(horizontalInput * moveSpeed, rb.linearVelocity.y);
     }
+
+    // --- Callbacks del Input System (Invoke Unity Events) ---
+
+    public void OnMove(InputAction.CallbackContext context)
+    {
+        // Soporta tanto Value (float) como Value (Vector2) si usas un binding 2D Vector
+        if (context.valueType == typeof(Vector2))
+        {
+            horizontalInput = context.ReadValue<Vector2>().x;
+        }
+        else
+        {
+            horizontalInput = context.ReadValue<float>();
+        }
+    }
+
+    public void OnJump(InputAction.CallbackContext context)
+    {
+        if (context.performed && isGrounded)
+        {
+            rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce);
+        }
+    }
+
+    public void OnInteract(InputAction.CallbackContext context)
+    {
+        if (context.performed && currentInteractable != null)
+        {
+            Interact();
+        }
+    }
+
+    // -------------------------------------------------------
 
     void Interact()
     {
@@ -74,7 +95,6 @@ public class PlayerController2D : MonoBehaviour
         }
     }
 
-    // Visualizar el radio del GroundCheck en el editor
     private void OnDrawGizmosSelected()
     {
         if (groundCheck != null)
