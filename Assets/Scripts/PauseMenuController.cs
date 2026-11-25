@@ -35,7 +35,8 @@ public class PauseMenuController : MonoBehaviour
     private void OnDisable()
     {
         SceneManager.sceneLoaded -= OnSceneLoaded;
-        // Safety net in case the object is destroyed while paused
+
+        // Safety net if this object is destroyed or disabled while paused
         if (IsPaused)
         {
             Time.timeScale = 1f;
@@ -52,7 +53,7 @@ public class PauseMenuController : MonoBehaviour
 
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        // Always guarantee normal time flow when entering any scene
+        // Guarantee normal time flow whenever a new scene loads
         Time.timeScale = 1f;
         IsPaused = false;
 
@@ -75,22 +76,17 @@ public class PauseMenuController : MonoBehaviour
         }
     }
 
-    // Hook this up to your Pause button if you want an explicit Pause-only method
+    // Hook this up to a dedicated "Pause" UI Button if preferred
     public void PauseGame()
     {
         if (IsPaused) return;
 
         IsPaused = true;
-        Time.timeScale = 0f; // Freezes scaled time (Time.deltaTime / FixedUpdate)
+        Time.timeScale = 0f;
 
         if (pauseMenuPanel != null)
         {
             pauseMenuPanel.SetActive(true);
-        }
-
-        if (GameManager.Instance != null)
-        {
-            GameManager.Instance.SetPausedState(true);
         }
 
         if (manageCursorLock)
@@ -113,11 +109,6 @@ public class PauseMenuController : MonoBehaviour
             pauseMenuPanel.SetActive(false);
         }
 
-        if (GameManager.Instance != null)
-        {
-            GameManager.Instance.SetPausedState(false);
-        }
-
         if (manageCursorLock)
         {
             Cursor.lockState = CursorLockMode.Locked;
@@ -128,7 +119,7 @@ public class PauseMenuController : MonoBehaviour
     // Hook this up to your "Main Menu" UI Button
     public void ReturnToMainMenu()
     {
-        // Unpause BEFORE changing scenes so nothing loads into a frozen timeScale
+        // Reset timeScale and pause state BEFORE loading the menu scene
         IsPaused = false;
         Time.timeScale = 1f;
 
@@ -143,13 +134,6 @@ public class PauseMenuController : MonoBehaviour
             Cursor.visible = true;
         }
 
-        if (GameManager.Instance != null)
-        {
-            GameManager.Instance.ReturnToMainMenu(mainMenuSceneName);
-        }
-        else
-        {
-            SceneManager.LoadScene(mainMenuSceneName);
-        }
+        SceneManager.LoadScene(mainMenuSceneName);
     }
 }
