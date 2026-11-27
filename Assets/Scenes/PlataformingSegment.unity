@@ -766,6 +766,18 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
+      - m_Target: {fileID: 163493688}
+        m_TargetAssemblyTypeName: SFXManager, Assembly-CSharp
+        m_MethodName: PlayCancelSound
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &132082320
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -899,6 +911,18 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
+      - m_Target: {fileID: 163493688}
+        m_TargetAssemblyTypeName: SFXManager, Assembly-CSharp
+        m_MethodName: PlayAcceptSound
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &145025975
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -987,6 +1011,8 @@ MonoBehaviour:
   runningSound: {fileID: 8300000, guid: 7cd370bb34950b543910d644dd538eaa, type: 3}
   interactSound: {fileID: 8300000, guid: a6123afddaa368243bfe0281a14bcc83, type: 3}
   fanfareSound: {fileID: 8300000, guid: bfc4a4f041946e6439f1dce9620f89b9, type: 3}
+  acceptSound: {fileID: 8300000, guid: a0084d1607b04d54cb881086b6963714, type: 3}
+  cancelSound: {fileID: 8300000, guid: 093109b07d98ca94292bf5a469690c0b, type: 3}
 --- !u!82 &163493689
 AudioSource:
   m_ObjectHideFlags: 0
@@ -4647,6 +4673,18 @@ MonoBehaviour:
           m_StringArgument: MainTitle
           m_BoolArgument: 0
         m_CallState: 2
+      - m_Target: {fileID: 163493688}
+        m_TargetAssemblyTypeName: SFXManager, Assembly-CSharp
+        m_MethodName: PlayAcceptSound
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &1630015819
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5389,6 +5427,18 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
+      - m_Target: {fileID: 163493688}
+        m_TargetAssemblyTypeName: SFXManager, Assembly-CSharp
+        m_MethodName: PlayCancelSound
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &1908009116
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5800,6 +5850,18 @@ MonoBehaviour:
       - m_Target: {fileID: 1734442439}
         m_TargetAssemblyTypeName: PauseMenuController, Assembly-CSharp
         m_MethodName: ReturnToMainMenu
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 163493688}
+        m_TargetAssemblyTypeName: SFXManager, Assembly-CSharp
+        m_MethodName: PlayAcceptSound
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}

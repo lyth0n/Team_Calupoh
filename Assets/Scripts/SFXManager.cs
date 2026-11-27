@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.Audio;
 
 [RequireComponent(typeof(AudioSource))]
 public class SFXManager : MonoBehaviour
@@ -11,6 +10,8 @@ public class SFXManager : MonoBehaviour
     [SerializeField] private AudioClip runningSound;
     [SerializeField] private AudioClip interactSound;
     [SerializeField] private AudioClip fanfareSound;
+    [SerializeField] private AudioClip acceptSound;
+    [SerializeField] private AudioClip cancelSound;
 
     private void Awake()
     {
@@ -21,7 +22,6 @@ public class SFXManager : MonoBehaviour
         }
 
         Instance = this;
-        DontDestroyOnLoad(gameObject);
 
         if (audioSource == null)
         {
@@ -29,34 +29,26 @@ public class SFXManager : MonoBehaviour
         }
     }
 
-    public void PlayJumpSound()
+    private void OnDestroy()
     {
-        if (audioSource != null && jumpSound != null)
+        if (Instance == this)
         {
-            audioSource.PlayOneShot(jumpSound);
+            Instance = null;
         }
     }
 
-    public void PlayRunningSound()
+    public void PlaySFX(AudioClip clip, float volumeScale = 1f)
     {
-        if (audioSource != null && runningSound != null)
+        if (audioSource != null && clip != null)
         {
-            audioSource.PlayOneShot(runningSound);
-        }
-    }
-    public void PlayInteractSound()
-    {
-        if (audioSource != null && interactSound != null)
-        {
-            audioSource.PlayOneShot(interactSound);
+            audioSource.PlayOneShot(clip, volumeScale);
         }
     }
 
-    public void PlayFanfareSound()
-    {
-        if (audioSource != null && fanfareSound != null)
-        {
-            audioSource.PlayOneShot(fanfareSound);
-        }
-    }
+    public void PlayJumpSound() => PlaySFX(jumpSound);
+    public void PlayRunningSound() => PlaySFX(runningSound);
+    public void PlayInteractSound() => PlaySFX(interactSound);
+    public void PlayFanfareSound() => PlaySFX(fanfareSound);
+    public void PlayAcceptSound() => PlaySFX(acceptSound);
+    public void PlayCancelSound() => PlaySFX(cancelSound);
 }
