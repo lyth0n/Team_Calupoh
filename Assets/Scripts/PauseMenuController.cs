@@ -7,6 +7,11 @@ public class PauseMenuController : MonoBehaviour
     [Header("UI")]
     [SerializeField] private GameObject pauseMenuPanel;
 
+    [Header("Meta de Interacciones")]
+    [Tooltip("GameObject que se mostrará cuando el contador de interacciones llegue a la meta.")]
+    [SerializeField] private GameObject fiveInteractionsPanel;
+    [SerializeField] private int targetInteractions = 5;
+
     [Header("Scenes")]
     [SerializeField] private string mainMenuSceneName = "MainMenu";
 
@@ -14,16 +19,23 @@ public class PauseMenuController : MonoBehaviour
     [SerializeField] private bool manageCursorLock = false;
 
     public bool IsPaused { get; private set; }
+    private bool targetReachedTriggered = false;
 
     private void Awake()
     {
-        // Ensure gameplay starts unpaused and the menu starts hidden
+        // Ensure gameplay starts unpaused and the menus start hidden
         IsPaused = false;
+        targetReachedTriggered = false;
         Time.timeScale = 1f;
 
         if (pauseMenuPanel != null)
         {
             pauseMenuPanel.SetActive(false);
+        }
+
+        if (fiveInteractionsPanel != null)
+        {
+            fiveInteractionsPanel.SetActive(false);
         }
     }
 
@@ -45,9 +57,46 @@ public class PauseMenuController : MonoBehaviour
 
     private void Update()
     {
-        if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
+        CheckInteractionGoal();
+
+        if (!targetReachedTriggered && Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
         {
             TogglePause();
+        }
+    }
+
+    private void CheckInteractionGoal()
+    {
+        if (targetReachedTriggered) return;
+
+        if (InteractableObject.TotalInteractions >= targetInteractions)
+        {
+            TriggerFiveInteractionsPause();
+        }
+    }
+
+    public void TriggerFiveInteractionsPause()
+    {
+        targetReachedTriggered = true;
+        IsPaused = true;
+        Time.timeScale = 0f;
+
+        PlayVictoryFanfareSound();
+
+        if (pauseMenuPanel != null)
+        {
+            pauseMenuPanel.SetActive(false);
+        }
+
+        if (fiveInteractionsPanel != null)
+        {
+            fiveInteractionsPanel.SetActive(true);
+        }
+
+        if (manageCursorLock)
+        {
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
         }
     }
 
@@ -56,10 +105,16 @@ public class PauseMenuController : MonoBehaviour
         // Guarantee normal time flow whenever a new scene loads
         Time.timeScale = 1f;
         IsPaused = false;
+        targetReachedTriggered = false;
 
         if (pauseMenuPanel != null)
         {
             pauseMenuPanel.SetActive(false);
+        }
+
+        if (fiveInteractionsPanel != null)
+        {
+            fiveInteractionsPanel.SetActive(false);
         }
     }
 
@@ -109,6 +164,11 @@ public class PauseMenuController : MonoBehaviour
             pauseMenuPanel.SetActive(false);
         }
 
+        if (fiveInteractionsPanel != null)
+        {
+            fiveInteractionsPanel.SetActive(false);
+        }
+
         if (manageCursorLock)
         {
             Cursor.lockState = CursorLockMode.Locked;
@@ -122,10 +182,16 @@ public class PauseMenuController : MonoBehaviour
         // Reset timeScale and pause state BEFORE loading the menu scene
         IsPaused = false;
         Time.timeScale = 1f;
+        InteractableObject.ResetInteractionCount();
 
         if (pauseMenuPanel != null)
         {
             pauseMenuPanel.SetActive(false);
+        }
+
+        if (fiveInteractionsPanel != null)
+        {
+            fiveInteractionsPanel.SetActive(false);
         }
 
         if (manageCursorLock)
@@ -135,5 +201,11 @@ public class PauseMenuController : MonoBehaviour
         }
 
         SceneManager.LoadScene(mainMenuSceneName);
+    }
+
+    private void PlayVictoryFanfareSound()
+    {
+        if (SFXManager.Instance == null) return;
+        SFXManager.Instance.PlayFanfareSound();
     }
 }

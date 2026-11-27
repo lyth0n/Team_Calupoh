@@ -23,6 +23,10 @@ public class PlayerController2D : MonoBehaviour
     private GameObject currentInteractable;
     private InteractableObject currentInteractableComponent;
 
+    [Header("Audio")]
+    [SerializeField] private AudioSource runLoopSource;
+    [SerializeField] private AudioClip runningLoopClip;
+
     private Rigidbody2D rb;
 
     void Awake()
@@ -30,8 +34,17 @@ public class PlayerController2D : MonoBehaviour
         rb = GetComponent<Rigidbody2D>();
         rb.freezeRotation = true;
 
-        // Guarda el punto de inicio estático al arrancar la escena
         staticStartPosition = startPoint != null ? startPoint.position : transform.position;
+
+        if (runLoopSource != null)
+        {
+            runLoopSource.playOnAwake = false;
+            runLoopSource.loop = true;
+            if (runningLoopClip != null)
+            {
+                runLoopSource.clip = runningLoopClip;
+            }
+        }
     }
 
     void Update()
@@ -40,6 +53,8 @@ public class PlayerController2D : MonoBehaviour
         {
             isGrounded = Physics2D.OverlapCircle(groundCheck.position, 0.2f, groundLayer);
         }
+
+        UpdateRunLoopAudio();
     }
 
     void FixedUpdate()
@@ -56,12 +71,21 @@ public class PlayerController2D : MonoBehaviour
         horizontalInput = 0f;
         currentInteractable = null;
         currentInteractableComponent = null;
+
+        StopRunLoopAudio();
     }
 
     // --- Callbacks del Input System (Invoke Unity Events) ---
 
     public void OnMove(InputAction.CallbackContext context)
     {
+        if (context.canceled)
+        {
+            horizontalInput = 0f;
+            StopRunLoopAudio();
+            return;
+        }
+
         if (context.valueType == typeof(Vector2))
         {
             horizontalInput = context.ReadValue<Vector2>().x;
@@ -77,6 +101,9 @@ public class PlayerController2D : MonoBehaviour
         if (context.performed && isGrounded)
         {
             rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce);
+            isGrounded = false;
+            StopRunLoopAudio();
+            PlayJumpingSound();
         }
     }
 
@@ -85,10 +112,38 @@ public class PlayerController2D : MonoBehaviour
         if (context.performed && currentInteractable != null)
         {
             Interact();
+            PlayInteractingSound();
         }
     }
 
     // -------------------------------------------------------
+
+    private void UpdateRunLoopAudio()
+    {
+        if (runLoopSource == null || runLoopSource.clip == null) return;
+
+        bool shouldRunAudioPlay = isGrounded && Mathf.Abs(horizontalInput) > 0.05f;
+
+        if (shouldRunAudioPlay)
+        {
+            if (!runLoopSource.isPlaying)
+            {
+                runLoopSource.Play();
+            }
+        }
+        else if (runLoopSource.isPlaying)
+        {
+            runLoopSource.Stop();
+        }
+    }
+
+    private void StopRunLoopAudio()
+    {
+        if (runLoopSource != null && runLoopSource.isPlaying)
+        {
+            runLoopSource.Stop();
+        }
+    }
 
     void Interact()
     {
@@ -128,9 +183,20 @@ public class PlayerController2D : MonoBehaviour
             Gizmos.DrawWireSphere(groundCheck.position, 0.2f);
         }
 
-        // Visualiza el punto de inicio en el editor
         Gizmos.color = Color.green;
         Vector3 gizmoStart = startPoint != null ? startPoint.position : (Application.isPlaying ? staticStartPosition : transform.position);
         Gizmos.DrawWireSphere(gizmoStart, 0.35f);
+    }
+
+    private void PlayJumpingSound()
+    {
+        if (SFXManager.Instance == null) return;
+        SFXManager.Instance.PlayJumpSound();
+    }
+
+    private void PlayInteractingSound()
+    {
+        if (SFXManager.Instance == null) return;
+        SFXManager.Instance.PlayInteractSound();
     }
 }
