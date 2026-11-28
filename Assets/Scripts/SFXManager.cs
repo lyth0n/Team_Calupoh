@@ -12,6 +12,7 @@ public class SFXManager : MonoBehaviour
     [SerializeField] private AudioClip fanfareSound;
     [SerializeField] private AudioClip acceptSound;
     [SerializeField] private AudioClip cancelSound;
+    [SerializeField] private AudioClip sighSound;
 
     private void Awake()
     {
@@ -51,4 +52,5 @@ public class SFXManager : MonoBehaviour
     public void PlayFanfareSound() => PlaySFX(fanfareSound);
     public void PlayAcceptSound() => PlaySFX(acceptSound);
     public void PlayCancelSound() => PlaySFX(cancelSound);
+    public void PlaySighSound() => PlaySFX(sighSound);
 }
